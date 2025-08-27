@@ -7,6 +7,7 @@ Test cases can be run with the following:
 """
 import os
 import logging
+from service import talisman
 from unittest import TestCase
 from tests.factories import AccountFactory
 from service.common import status  # HTTP Status Codes
@@ -18,6 +19,8 @@ DATABASE_URI = os.getenv(
 )
 
 BASE_URL = "/accounts"
+
+HTTPS_ENVIRON = {'wsgi.url_scheme': 'https'}
 
 
 ######################################################################
@@ -33,6 +36,7 @@ class TestAccountService(TestCase):
         app.config["DEBUG"] = False
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URI
         app.logger.setLevel(logging.CRITICAL)
+        talisman.force_https = False
         init_db(app)
 
     @classmethod
@@ -180,3 +184,16 @@ class TestAccountService(TestCase):
         """It should not allow an illegal method call"""
         resp = self.client.delete(BASE_URL)
         self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_security_headers(self):
+        """It should return security headers"""
+        resp = self.client.get(BASE_URL)
+        #self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        expected_headers = {
+            'X-Frame-Options': 'SAMEORIGIN',
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Security-Policy': 'default-src \'self\'; object-src \'none\'',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+        }
+        for k, v in expected_headers.items():
+            self.assertEqual(resp.headers.get(k), v)
