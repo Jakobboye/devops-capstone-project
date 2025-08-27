@@ -188,7 +188,6 @@ class TestAccountService(TestCase):
     def test_security_headers(self):
         """It should return security headers"""
         resp = self.client.get(BASE_URL)
-        
         expected_headers = {
             'X-Frame-Options': 'SAMEORIGIN',
             'X-Content-Type-Options': 'nosniff',
